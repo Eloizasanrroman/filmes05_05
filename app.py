@@ -1,12 +1,37 @@
 import json
-import os  # Editei aqui
-import uuid  # Editei aqui
+import os
+import uuid
+from functools import wraps
 
-from flask import Flask, request, jsonify, render_template, redirect, url_for
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from psycopg2.extras import RealDictCursor
 from database import get_connection
 
+
 app = Flask(__name__)
+
+app.secret_key = os.environ.get("SECRET_KEY")
+
+users = {
+    "eloiza@gmail.com": "1234"
+}
+
+
+
+def login_required(func):
+    @wraps(func)
+    def decorated_function(*args, **kwargs):
+        if "user" not in session:
+            return redirect(url_for("login"))
+        return func(*args, **kwargs)
+    return decorated_function
+
+
+
+
+
+
+
 
 ALLOWED_EXTENSIONS = {"jpg", "jpeg", "png"}  # Editei aqui
 
@@ -16,8 +41,9 @@ UPLOAD_FOLDER = 'static/uploads'  # Editei aqui
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER  # Editei aqui
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)  # Editei aqui
 
+
 # Teste API
-@app.route('/', methods=['GET'])
+@app.route('/api', methods=['GET'])
 def home():
     return jsonify({"message": "API de catalogo de filmes"}), 200
 
@@ -31,6 +57,7 @@ def ping():
 
 # Listar todos os filmes
 @app.route('/filmes', methods=['GET'])
+@login_required
 def listar_filmes():
     sql = "SELECT * FROM filmes"
     try:
@@ -47,6 +74,7 @@ def listar_filmes():
 
 
 @app.route("/novo", methods=["GET", "POST"])
+@login_required
 def novo_filme():
     sql = "INSERT INTO filmes (titulo, genero, ano, url_capa) VALUES (%s, %s, %s, %s)"
     try:
@@ -83,6 +111,7 @@ def novo_filme():
 
 
 @app.route("/editar/<int:id>", methods=["GET", "POST"])
+@login_required
 def editar_filme(id):
     try:
         conn = get_connection()
@@ -127,6 +156,7 @@ def editar_filme(id):
 
 
 @app.route("/deletar/<int:id>", methods=["POST"])
+@login_required
 def deletar_filme(id):
     try:
         conn = get_connection()
@@ -142,10 +172,38 @@ def deletar_filme(id):
         return jsonify({"message": "erro ao deletar filme"}), 500
 
 
-
-
 def arquivo_permitido(nome):  # Editei aqui
     return '.' in nome and nome.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+
+
+
+
+
+
+@app.route("/", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
+
+        if email in users and users[email] == password:
+            session["user"] = email
+            return redirect(url_for("listar_filmes"))
+        else:
+            return render_template("login.html", erro="Email ou senha inválido")
+    return render_template("login.html", erro=None)
+
+
+@app.route("/logout")
+def logout():
+    session.pop("user", None)
+    return redirect(url_for("login"))
+
+
+
+
 
 
 
