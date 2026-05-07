@@ -12,14 +12,22 @@
 
     <header class="navbar">
         <h1 class="logo">Dev<span>FLIX</span></h1>
+        <a href="{{ url_for('logout') }}" class="btn-logout">Sair</a>
     </header>
 
     <section class="container">
         <div class="header-section">
             <h2 class="section-title">Catálogo de Filmes</h2>
-            <a href="{{ url_for('novo_filme') }}" class="btn-add">
-                + Adicionar Filme
-            </a>
+
+            <div>
+                <a href="{{ url_for('novo_filme') }}" class="btn-add">
+                    + Adicionar Filme
+                </a>
+
+                <a href="{{ url_for('cadastro') }}" class="btn-add">
+                    + Cadastrar Usuário
+                </a>
+            </div>
         </div>
 
         <div class="grid-filmes">

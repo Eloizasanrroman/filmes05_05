@@ -6,15 +6,13 @@ from functools import wraps
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from psycopg2.extras import RealDictCursor
 from database import get_connection
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__)
 
 app.secret_key = os.environ.get("SECRET_KEY")
 
-users = {
-    "eloiza@gmail.com": "1234"
-}
 
 
 
@@ -184,22 +182,106 @@ def arquivo_permitido(nome):  # Editei aqui
 
 @app.route("/", methods=["GET", "POST"])
 def login():
-    if request.method == "POST":
-        email = request.form["email"]
-        password = request.form["password"]
+    try:
 
-        if email in users and users[email] == password:
-            session["user"] = email
+        if request.method == "POST":
+
+            email = request.form["email"]
+            password = request.form["password"]
+
+            conn = get_connection()
+
+            cursor = conn.cursor(cursor_factory=RealDictCursor)
+
+            sql = "SELECT * FROM usuario WHERE email = %s"
+
+            cursor.execute(sql, [email])
+
+            usuario = cursor.fetchone()
+
+            conn.close()
+
+            # Usuário não encontrado
+            if usuario is None:
+                return render_template(
+                    "login.html",
+                    erro="Usuário não encontrado"
+                )
+
+            # Senha incorreta
+            if not check_password_hash(usuario["senha"], password):
+                return render_template(
+                    "login.html",
+                    erro="Senha incorreta"
+                )
+
+            # Login correto
+            session["user"] = usuario["email"]
+
             return redirect(url_for("listar_filmes"))
-        else:
-            return render_template("login.html", erro="Email ou senha inválido")
-    return render_template("login.html", erro=None)
+
+        return render_template("login.html", erro=None)
+
+    except Exception as ex:
+        print("erro:", str(ex))
+
+        return jsonify({
+            "message": "erro ao fazer login"
+        }), 500
+
+
 
 
 @app.route("/logout")
 def logout():
     session.pop("user", None)
     return redirect(url_for("login"))
+
+
+
+
+
+
+
+
+@app.route('/cadastro', methods=['GET', 'POST'])
+def cadastro():
+    erro = None
+
+    if request.method == 'POST':
+        nome = request.form['nome']
+        email = request.form['email']
+        senha = request.form['senha']
+
+        conn = get_connection()
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("SELECT * FROM usuario WHERE email = %s", (email,))
+            if cursor.fetchone():
+                erro = "Email já cadastrado"
+                return render_template("cadastro.html", erro=erro)
+
+            senha_hash = generate_password_hash(senha)
+
+            cursor.execute("""
+                INSERT INTO usuario (nome, email, senha)
+                VALUES (%s, %s, %s)
+            """, (nome, email, senha_hash))
+
+            conn.commit()
+            return redirect(url_for('login'))
+
+        except Exception as e:
+            print("ERRO REAL:", e)
+            erro = "Erro ao cadastrar usuário!"
+
+        finally:
+            conn.close()
+
+    return render_template('cadastro.html', erro=erro)
+
+
 
 
 

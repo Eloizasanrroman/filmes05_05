@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Cadastro</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <section class="form-container">
+
+        <h2>Cadastrar Usuário</h2>
+
+        {% if erro %}
+            <p style="color:red;">{{ erro }}</p>
+        {% endif %}
+
+        <form method="POST" class="form-filme">
+
+            <input
+                type="text"
+                name="nome"
+                placeholder="Nome"
+                required
+            >
+
+            <input
+                type="email"
+                name="email"
+                placeholder="Email"
+                required
+            >
+
+            <input
+                type="password"
+                name="senha"
+                placeholder="Senha"
+                required
+            >
+
+            <button type="submit" class="btn-save">
+                Cadastrar
+            </button>
+
+        </form>
+
+        <a href="{{ url_for('login') }}" class="btn-back">
+            Voltar para login
+        </a>
+
+    </section>
+
+</body>
+
+</html>
